@@ -1,0 +1,38 @@
+{
+ "schema": "prime-agent-shokunin-v1",
+ "roster": {
+  "harness-integrity": {
+   "rank": "shokunin",
+   "province": ".shokunin/harness-integrity/PROVINCE.md",
+   "axes": [
+    "depth",
+    "calibration"
+   ],
+   "harness_spec": "global:primeagent-harness-integrity",
+   "promotion_round": 4
+  },
+  "rlm-dispatch": {
+   "rank": "shokunin",
+   "province": ".shokunin/rlm-dispatch/PROVINCE.md",
+   "axes": [
+    "operability",
+    "calibration"
+   ],
+   "harness_spec": "global:primeagent-rlm-dispatch",
+   "promotion_round": 4
+  }
+ },
+ "rounds": [
+  {
+   "round": 21,
+   "date": "2026-10-12",
+   "type": "mint",
+   "minted": [
+    "game-dev-2d",
+    "lore"
+   ],
+   "promotions": [],
+   "notes": "Explicit operator directive: two NEW shokunin lanes \u2014 game-dev-2d (2D game production verified by executable headless fixtures) and lore (fictional-world records with consistency verification). Mint evidence .shokunin/mints/<id>.md; roster rejection scan recorded there; probation, zero verified rounds; no roster row until promotion. game-dev-2d seeded with games-engine-mechanics r15 fixture corpus (previous art, provenance in corpus/knowledge/seed.md)."
+  }
+ ]
+}
