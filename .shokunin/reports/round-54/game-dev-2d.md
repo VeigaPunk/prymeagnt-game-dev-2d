@@ -1,0 +1,17 @@
+# game-dev-2d — round 54 — calibration
+
+## Work performed
+- Declared one calibration move in LOG before wave 1: reverse r53 edge10 order to `Input.action_release("ui_left")` then `root.push_input(matching release)` before the same frame. Baseline r53 work/report `2c08dfd`/`46adb5c` (ordinary67/full78). Work commit `f8b3e993ec3166dea2d32f40663df7df660813fd`. Independent Godot 4.7.2 direct scratches: prior ten edges parsed, focus transfers and callback disconnect/reconnect retained; reverse edge10 observer3→4, action pressed true→false, numeric3/receipts `[6,3]`/Label Value3, focus/callback true, all eleven edge checks then unique expected-negative exit2. It matches r51 parsed and r53 push-then-clear measured postconditions; the r53 ordering is not necessary for these checks.
+- Seven wave-1 leaves settled; only executor edited tracked fixture/runner after causal scratch. Added separate `--clear-then-push-release` branch, one CASE/exact allowance; prior r51-r53 branches/rows preserved. Author ordinary **68/68**, full seven-flag **79/79**, all prior69 tuple-bearing rows exact. Scout missing-observer scratch timeout/exit143 and malformed invocation exit127; scribe malformed setup exits127; executor malformed shell exit127, wrong-branch scratch parse error and nil-observer run remain adverse and not PASS evidence.
+- Named non-author full seven-flag **79/79 PASS** (68 ordinary + 2 mutants + 9 opt-ins); all **69/69** prior r53 tuple rows exact by case, nine opt-ins stable. Raw byte-identical `corpus/lessons/r54-order-non-author.json`. Separate fault `corpus/lessons/r54-fault-non-author.json` outer PASS with intentional inner hang/unrelated FAIL and clean expected-negative PASS. Omit direct clear: early pressed-state ERROR; omit push: early observer ERROR; neither reaches terminal and both classifier-rejected. Fixture/runner hashes stable during replay. Named verifier's initial malformed invocation exit127 launched no test.
+
+## Landed changes and before → after
+- LOG/SCORECARD, additive fixture branch+row+exact allowance, lesson, seven wave reports, named/fault raws and verifier report: `f8b3e993ec3166dea2d32f40663df7df660813fd`. This report lands separately afterward.
+- Before r53: 67 ordinary/78 full; push-then-clear matched parsed route on measured postconditions but the reversed order was untested. After r54: 68 ordinary/79 full; clear-then-push also matches. **Calibration improved**, depth unchanged, coverage unchanged, no harm in finite clean replay. Not a proof of route or ordering equivalence beyond these measurements.
+- Constants changed ordinary67→68/full78→79; one new exact expected-negative exit2; edge10 reverse composite observer3→4 and pressed true→false. Scope only headless synthetic Godot 4.7.2 route/order comparison; no HSlider internal consumption, OS/physical timing/input, rendered/pointer UI, accessibility, production or general provenance. No engine/editor/seeded controls edited, publishing, push or merge.
+
+## SHONEN
+- [~] Decision/error table with cited source — `corpus/lessons/r54-hslider-reversed-composite-order.md`; no independent promotion check.
+- [~] End-to-end task and named non-author replay — `reports/r54-order-verifier.md` and `corpus/lessons/r54-order-non-author.json`; no independent promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed, PROVINCE accurate — not independently checked.
