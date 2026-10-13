@@ -1,0 +1,18 @@
+# game-dev-2d — round 32 — coverage
+
+## Work performed
+- Declared distinct stateful CheckBox `button_pressed` + `toggled(bool)`→Label coverage in LOG before dispatch. Eight wave-1 leaves and named non-author verifier settled. Work commit `af5e22f9c967738870b778d30b0f36d7437dfcab`.
+- Added new `checkbox_toggle.gd` and paired ordinary runner cases. Connected focused headless `ui_accept` actions change state unchecked→checked→unchecked, emit boolean receipts `[true,false]`, Label Ready→On→Off, exit0. Disconnected arm runs the **same two action pairs**, state true then false, no receipts and Label Ready throughout, then exits2 intended missing-signal assertion. No manual widget state mutation/signal emission. An initial tracked disconnected draft quit after first toggle; reviewer/critic feedback led executor to correct it before final replay. An omitted expected-negative allowlist diagnostic was found by executor replay and corrected.
+- Scout's first scratch script had typed Array assignment error, leaving a Godot process alive until parent terminated PID 1530630 after >3 minutes. The raw failed attempt remains `corpus/live/r32-checkbox-scout/initial-typed-array-error.log` and is not PASS evidence. Corrected scout scratch, independent reviewer, parent direct tracked run, executor and named verifier supplied valid paired evidence. No tracked source attribution is drawn from failed scratch.
+- Named non-author `r32-checkbox-verifier` ran full default-path `python .shokunin/game-dev-2d/corpus/fixtures/run_battery.py --probe-failing --probe-unrelated-error --probe-export-launch --probe-godot-error --probe-stream-attribution --probe-crash-exit --probe-timeout`: exit0 **56/56 PASS** (45 ordinary +2 mutants +9 opt-in), all prior r31 **54** verdict/actual_exit/signature triples unchanged. Raw byte-identical `corpus/lessons/r32-checkbox-verifier.json`, report `reports/r32-checkbox-verifier.md`; parent corrected verifier prose's mistaken “45 predecessor” to 54 after checking raw. Separate fault-injection outer PASS with intentional inner adverse FAIL raw `r32-fault-verifier.json`. Source hashes stable during replay. Scratch sabotage disconnecting positive's signal exited2 on first signal assertion: it does not prove second toggle, which the tracked disconnected case independently verifies.
+
+## Landed changes and before → after
+- LOG/SCORECARD, new CheckBox fixture/runner, lesson, wave and verifier reports/raw: `af5e22f9c967738870b778d30b0f36d7437dfcab`. This report lands separately afterward.
+- Before immutable r31 HEAD `61ae4df532797fb4de158c390805a23dc4bdd796`: 43 ordinary/54 full, Button `pressed`/focus sequence but no CheckBox boolean state/signal. After: 45 ordinary/56 full with distinct CheckBox toggled state/receipt pair. **Coverage improved**; **depth unchanged**, **calibration unchanged**, none harmed in finite replay. No tracked CheckBox press-only assertions, pointer/rendered UI, physical timing, accessibility, general production behavior or arbitrary mutation-proof claim.
+- Constants changed: 43→45 ordinary, 54→56 full, new disconnected expected exit2, toggle receipts `[true,false]`, Label On/Off. No engine/editor or seeded control mutation, publishing, push, merge.
+
+## SHONEN
+- [~] Decision/error table with cited source — `corpus/lessons/r32-checkbox-toggle.md`; not independent promotion check.
+- [~] End-to-end task and named non-author replay — `reports/r32-checkbox-verifier.md`, `corpus/lessons/r32-checkbox-verifier.json`; not promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed, PROVINCE accurate — not independently checked.
