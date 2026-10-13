@@ -1,0 +1,16 @@
+# game-dev-2d — round 40 — calibration
+
+## Work performed
+- LOG claim declared before eight wave-1 leaves. Work commit `4e2285d15e896096f2448b2fd59bd558c2cc93b5`. Real Godot 4.7.2 paired same-wiring in-tree HSlider min0 max10 step1 initial5, seven distinct fresh parsed edges (two right presses, right release, two left press/release pairs), one process frame each. Focused values 6,7,7,6,6,5,5 with cumulative receipts `[6,7,6,5]` and signal-driven Label. No-focus GUI owner not slider before each edge and value5/receipts[]/Label Value5 after each; terminal expected-negative exit2 only after all seven checks. Old fixture's early focus failure and a reviewer scratch typed-array failure/exit143 retained as non-PASS telemetry.
+- Named non-author `r40-repeat-focus-verifier`: default-path full `python .shokunin/game-dev-2d/corpus/fixtures/run_battery.py --probe-failing --probe-unrelated-error --probe-export-launch --probe-godot-error --probe-stream-attribution --probe-crash-exit --probe-timeout` exit0 **65/65 PASS** (54 ordinary +2 mutants +9 opt-ins). All prior r39 55 rows carrying `(case,verdict,actual_exit,signature)` unchanged; nine opt-ins stable in comparable inner/outer classifications (artifact paths vary); exactly one new PASS exit2. Raw `corpus/lessons/r40-repeat-focus-verifier.json` byte-identical to run output; separate fault outer PASS with deliberate inner hang/unrelated-error FAIL and clean negative PASS, raw `r40-fault-verifier.json`. Focus-assignment scratch sabotage fails early assertion, not terminal classifier; focused skipped edge fails. No-focus-only skipped event cannot be observed from its invariant response, though reviewed source dispatches all seven events. Verifier tracked source hashes stable.
+
+## Landed changes and before → after
+- LOG/SCORECARD, `slider_adjust.gd` paired focus-absence branch, runner one exact-classified negative row, lesson, eight wave reports and verifier receipts: `4e2285d15e896096f2448b2fd59bd558c2cc93b5`. This report lands after the work commit.
+- Before r39 report HEAD `ebc33ef`: 53 ordinary/64 full; focused repeat positive and disconnected consumer negative, but no seven-edge focus-absence control. After: 54 ordinary/65 full and paired no-focus same-wiring row. **Calibration improved**, **depth unchanged**, **coverage unchanged as axis**, none harmed in finite replay.
+- Constants changed ordinary53→54/full64→65, no-focus edge values seven 5s, receipts[], Label Value5, terminal expected exit2. Scope only deliberate synthetic input+frames, not OS auto-repeat, physical timing/keyboard, rendered/pointer UI, accessibility, production, generic slider or independently observable no-focus dispatch count. No engine/editor/seeded control edits, publishing, push or merge.
+
+## SHONEN
+- [~] Decision/error table with cited source — `corpus/lessons/r40-hslider-seven-edge-no-focus.md`; no independent promotion check.
+- [~] End-to-end task and named non-author replay — `reports/r40-repeat-focus-verifier.md`, `corpus/lessons/r40-repeat-focus-verifier.json`; no independent promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed, PROVINCE accurate — not independently checked.
