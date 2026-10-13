@@ -1,0 +1,21 @@
+# game-dev-2d — round 25 — calibration
+
+## Work performed
+- Declared paired causal relative/absolute `--runs` export-path diagnosis before dispatch (`.shokunin/game-dev-2d/LOG.md`). Eight wave-1 children settled; `r25-baseline-scout` supplied **no assigned report** and identified itself as the executor on follow-up. This is lane-failure/attribution telemetry, not a completed baseline review. Work commit `24688b53eb445bf69ec3807023a8e19644fc1925`.
+- Independent pair reviewer alternated unchanged runner full battery relative/absolute/absolute/relative from same cwd/preset/seed: export readiness FAIL/PASS/PASS/FAIL, missing-preset negative PASS all four; raw committed `corpus/lessons/r25-pair-before-{1,2,3,4}.json`, direct target-form crossover `r25-direct-target-pair.json`; `reports/r25-pair-reviewer.md`. Relative project + absolute target succeeded; absolute project + relative target failed. One-line first edit normalized export-readiness target.
+- First named non-author `r25-export-verifier` explicit-relative full replay **49/50**, exit 1: readiness PASS, `probe_export_launch` FAIL on its separate still-relative export targets. Raw `corpus/lessons/r25-export-verifier.json`, detailed `r25-export-launch-adverse.json`; failure retained. Parent normalized **only** second export-launch target via `.resolve()`. Final diff has exactly two target-path normalizations; no classifier/CASE/preset/success predicate/cleanup changes.
+- Fresh named non-author `r25-export-verifier2` explicit-relative full flags replay exit 0 **50/50 PASS**, raw `corpus/lessons/r25-export-verifier2.json`; two export-launch arm details `r25-export-launch-verifier2.json`, `reports/r25-export-verifier2.md`. Both launch exports exit 0, 73,703,800-byte output, positive startup asserted true and missing-startup control false; products cleaned. Missing-preset case exit 1/outer PASS. Separate absolute ordinary 39/39 PASS; fault injection top-level meta PASS, deliberate inner adverse FAIL preserved `r25-fault-verifier2.json`. All 45 tracked fixture/runner hashes stable during verifier replay.
+
+## Landed changes
+- LOG/SCORECARD, exact two-line runner correction, cited lesson, seven wave-1 reports (baseline-scout artifact missing), two named verifier reports, pre-fix paired raw, first-fix adverse raw, final-fix raw: `24688b53eb445bf69ec3807023a8e19644fc1925`. This report lands in a later report-only commit.
+
+## Before → after measurements
+- Baseline HEAD `1482c9311047a1a78cadb41c6818254fe9fcdcbe`: 39 ordinary CASES, default-path r24 full 50/50 PASS, relative-root export adverse r24 38/39. Alternating unchanged-runner relative/absolute/absolute/relative 38/39,39/39,39/39,38/39; relative targets zero-byte/missing-path, absolute 73,703,800-byte same-hash products. At `24688b53eb445bf69ec3807023a8e19644fc1925`, explicit relative full command `python .shokunin/game-dev-2d/corpus/fixtures/run_battery.py --probe-failing --probe-unrelated-error --probe-export-launch --probe-godot-error --probe-stream-attribution --probe-crash-exit --probe-timeout --runs .shokunin/game-dev-2d/corpus/live/r25-verifier2-relative` → 50/50 PASS. Intermediate 49/50 remains adverse and identified second call site.
+- Verdicts: **calibration improved** for causal export-target spelling diagnosis and both fixture export call sites corrected/fail-closed; **coverage unchanged** (39 ordinary); **depth unchanged**. No harmed axis in final finite replay; an intermediate failed verifier was not passed off as success. General/production export reliability remains unproved; prior adverse runs and baseline-scout artifact failure remain visible.
+- Constants changed: no game constants; only two export target paths now absolute via `Path.resolve()`. No engine/editor or seeded control mutation, publishing, push, merge.
+
+## SHONEN
+- [~] Decision/error table with cited raw pairs — `corpus/lessons/r25-export-target-path.md`; verifier did not review probation box.
+- [~] End-to-end task and fresh named non-author verifier — `reports/r25-export-verifier2.md`, raw `corpus/lessons/r25-export-verifier2.json`; not promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed, PROVINCE accurate — not independently checked.
