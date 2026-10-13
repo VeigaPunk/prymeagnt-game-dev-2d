@@ -1,0 +1,16 @@
+# game-dev-2d — round 42 — depth
+
+## Work performed
+- LOG claim declared before eight wave-1 leaves. Work commit `ba0a4c3fd422d6055de18e0246f4130d614e29d2`. Godot 4.7.2 paired connected in-tree HSlider min0 max10 step1 initial5, seven deliberate fresh parsed actions+one frame each. Slider owns focus for first right press→6/[6]/Value6; separate focusable Button owns focus for second right press and release→6/[6]/Value6; slider focus restored before first left press→5/[6,5]/Value5; release holds; second left press→4/[6,5,4]/Value4; release holds. Owner verified before each, state/receipt array/Label after each. First scout scratch expected an extra receipt on an unchanged edge and failed its own incorrect assertion; corrected before the successful measurements. That first attempt remains telemetry, not PASS.
+- Named non-author `r42-focus-restore-verifier` full default-path `python .shokunin/game-dev-2d/corpus/fixtures/run_battery.py --probe-failing --probe-unrelated-error --probe-export-launch --probe-godot-error --probe-stream-attribution --probe-crash-exit --probe-timeout`: exit0 **67/67 PASS** (56 ordinary+2 mutants+9 opt-ins). All prior r41 **57** `(case,verdict,actual_exit,signature)` tuples unchanged; nine opt-ins stable in comparable inner/outer classifications, excluding run-specific paths; exactly one new PASS exit0. Byte-identical `corpus/lessons/r42-focus-restore-verifier.json`; separate fault outer PASS with intentional inner hang/unrelated-error FAIL and clean negative PASS (`r42-fault-verifier.json`). Missing focus restoration fails early owner check; missing first press fails early state check; neither false PASS. Fixture/runner hashes stable during verifier.
+
+## Landed changes and before → after
+- LOG/SCORECARD, dedicated `slider_adjust.gd` focus-restore branch, one runner positive row, lesson, wave reports, verifier raw/report: `ba0a4c3fd422d6055de18e0246f4130d614e29d2`. This report lands separately after work commit.
+- Before r41 report HEAD `36e8fc1`: 55 ordinary/66 full; focused history and focus handoff without restoration. After: 56 ordinary/67 full. **Depth improved** by resumed adjustment+receipt history after focus restoration; **coverage unchanged**, **calibration unchanged as axes**, none harmed in finite replay.
+- Constants changed ordinary55→56/full66→67, values 6,6,6,5,5,4,4, cumulative final receipts `[6,5,4]`, positive exit0. Focus target specifically Button (focusable Control). Owner/state checks do not identify internal consumer of unchanged edges. Scope parsed synthetic events+frames only, not OS repeat, physical timing/keyboard, rendered/pointer UI, accessibility, production or generic slider behavior. No engine/editor/seeded control edits, publishing, push or merge.
+
+## SHONEN
+- [~] Decision/error table with cited source — `corpus/lessons/r42-hslider-focus-restore.md`; no independent promotion check.
+- [~] End-to-end task and named non-author replay — `reports/r42-focus-restore-verifier.md`, `corpus/lessons/r42-focus-restore-verifier.json`; no independent promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed, PROVINCE accurate — not independently checked.
