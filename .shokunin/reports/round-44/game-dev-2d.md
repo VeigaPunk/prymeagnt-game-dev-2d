@@ -1,0 +1,16 @@
+# game-dev-2d — round 44 — depth
+
+## Work performed
+- LOG claim declared before eight wave-1 leaves; work commit `728fd8e771dfd4c142381cb0b01d198deb689ccd`. Real Godot 4.7.2 connected in-tree HSlider min0 max10 step1 initial5, nine fresh parsed actions+one frame each. Slider owns first right press→6/[6]/Value6; Button owns second right press/release→hold6; slider restored first left press/release→5/[6,5]/Value5; Button owns second left press/release→hold5; slider restored again third left press/release→4/[6,5,4]/Value4. Owner verified before each, value/full receipts/Label after each. Paired r43 negative ends5/[6,5]. Executor first non-additive edit replaced r43 branch and runner row; parent caught it, stopped the integrated replay before completion, and retained `corpus/live/runs/20261013T072845553725Z/` without verdict as adverse telemetry. Corrected implementation adds a separate r44 branch/row, preserving r43 exactly; ordinary author replay 58/58 PASS.
+- Named non-author `r44-second-restore-verifier` full default-path `python .shokunin/game-dev-2d/corpus/fixtures/run_battery.py --probe-failing --probe-unrelated-error --probe-export-launch --probe-godot-error --probe-stream-attribution --probe-crash-exit --probe-timeout`: exit0 **69/69 PASS** (58 ordinary+2 mutants+9 opt-ins). All prior r43 **59** tuple-bearing `(case,verdict,actual_exit,signature)` rows unchanged; nine opt-ins stable comparable outer/inner classifications, excluding paths; exactly one new PASS exit0. Raw `corpus/lessons/r44-second-restore-verifier.json` byte-identical; separate fault outer PASS with intentional inner hang/unrelated-error FAIL and clean negative PASS (`r44-fault-verifier.json`). Missing final restoration fails edge7 owner check; missing first press fails edge0 state check. Fixture/runner hashes stable through verifier.
+
+## Landed changes and before → after
+- LOG/SCORECARD, additive dedicated `slider_adjust.gd` second-restore branch, one positive runner row, lesson, wave reports, named verifier raw/report: `728fd8e771dfd4c142381cb0b01d198deb689ccd`. This report lands separately after work commit.
+- Before r43 report HEAD `c34b271`: 57 ordinary/68 full and second focus loss ending5. After: 58 ordinary/69 full and second restored adjustment ending4. **Depth improved**, **coverage unchanged**, **calibration unchanged as axes**, none harmed in finite clean replay.
+- Constants changed ordinary57→58/full68→69, nine values 6,6,6,5,5,5,5,4,4, final receipts `[6,5,4]`, positive exit0. Focus target Button; owner/state checks do not identify internal consumer of no-change edges. Scope synthetic parsed actions/frames, not OS repeat, physical keyboard/timing, rendered/pointer UI, accessibility, production or generic slider behavior. No engine/editor/seeded control edits, publishing, push or merge.
+
+## SHONEN
+- [~] Decision/error table with cited source — `corpus/lessons/r44-hslider-second-focus-restore.md`; no independent promotion check.
+- [~] End-to-end task and named non-author replay — `reports/r44-second-restore-verifier.md`, `corpus/lessons/r44-second-restore-verifier.json`; no independent promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed, PROVINCE accurate — not independently checked.
