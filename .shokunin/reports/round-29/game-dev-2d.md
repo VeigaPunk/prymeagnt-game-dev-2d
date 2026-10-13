@@ -1,0 +1,18 @@
+# game-dev-2d — round 29 — calibration
+
+## Work performed
+- Declared a focus-dependent headless Button `ui_accept` contrast in LOG before dispatch; eight wave-1 leaves and one named non-author verifier settled. Corrected scope before admission: one new ordinary `button_activation_unfocused` row, 41→42 ordinary / 52→53 full. Work commit `12b8a00baf863b8886ddc359026fd076dda49937`.
+- Tracked fixture checks GUI focus owner and Button.has_focus before action, logs owner/focus after each complete action; positive still gets ordered receipts `[1,2]` / labels `Activated 1`, `Activated 2`; null-owner `--no-focus` gets zero/Ready and fails intended first-step assertion. Runner classifies that new negative by diagnostic and expected exit2. Same input and signal route; helper no longer acquires focus implicitly.
+- Contradictory adverse telemetry: `r29-baseline-scout` initially wrote executor-named report asserting scratch no-focus PASS `[1,2]` despite no saved successful raw output, then wrote its proper immutable HEAD baseline. Parent, executor and named verifier reran that same saved scratch source/path and got exit2 intended step1 with receipts0/Ready. Original assertion is preserved in executor's corrected report and LOG, not counted as reproducible evidence or silently erased. No causal account for initial claimed PASS is proven.
+- Named non-author `r29-focus-verifier` full default-path `python .shokunin/game-dev-2d/corpus/fixtures/run_battery.py --probe-failing --probe-unrelated-error --probe-export-launch --probe-godot-error --probe-stream-attribution --probe-crash-exit --probe-timeout` exited0, **53/53 PASS** (42 ordinary +2 mutants +9 opt-in), all 52 previous case verdict/exit/signature tuples unchanged. Direct tracked focused mode exit0 owner true/receipts `[1,2]`; no-focus repeated twice exit2 intended step1 owner false/receipts0/Ready, not setup. Raw byte-identical `corpus/lessons/r29-focus-verifier.json`, report `reports/r29-focus-verifier.md`; separate fault-injection outer PASS with intentional inner adverse FAIL raw `r29-fault-verifier.json`. Fixture/runner hashes stable during replay.
+
+## Landed changes and before → after
+- LOG/SCORECARD, Button fixture/runner, focus lesson, wave and verifier reports/raw: `12b8a00baf863b8886ddc359026fd076dda49937`; this report lands separately after the work commit.
+- Before HEAD `0c8423b2d8ab3607cee1897fb2fb18c12bc1f9e3`: 41 ordinary and 52 full; two-step focused Button depth, disconnected negative, **no explicit no-focus arm**. After: 42 ordinary/53 full, one focus-control row and explicit focus checks, old 52 unchanged. **Calibration improved** under headless synthetic Button `root.push_input(ui_accept)`; **depth unchanged**, **coverage unchanged as axis** (extra ordinary row is this calibration control), none harmed in finite replay. Tracked no-focus fails at first action; it does not assert zero after a second no-focus action. No pointer hit-testing, rendered UI, accessibility, production focus, arbitrary mutation-resistance or general Godot input claim.
+- Constants changed: 41→42 ordinary, 52→53 full, new negative expected exit2; existing two positive action pairs and `[1,2]` receipts remain. No engine/editor or seeded control edits, publishing, push, merge.
+
+## SHONEN
+- [~] Decision/error table with cited source — `corpus/lessons/r29-button-focus.md`; not independent promotion check.
+- [~] End-to-end task and named non-author replay — `reports/r29-focus-verifier.md`, `corpus/lessons/r29-focus-verifier.json`; not promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed, PROVINCE accurate — not independently checked.
