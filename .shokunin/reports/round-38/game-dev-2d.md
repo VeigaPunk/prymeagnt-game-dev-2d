@@ -1,0 +1,16 @@
+# game-dev-2d — round 38 — depth
+
+## Work performed
+- Declared four-edge focused HSlider input attribution in LOG before eight wave-1 leaves. Work commit `64133cd0ef5851c511f0fefe5bfc4a50515144ee`. Real Godot 4.7.2 one fresh parsed `InputEventAction` plus one process frame per edge: focused connected right press value6/receipt `[6]`/Label Value6; right release unchanged; left press value5/receipts `[6,5]`/Label Value5; left release unchanged. Focused disconnected values 6,6,5,5 with no receipts/Label Value5; no-focus values5 at all four edges with no receipts/Label Value5. Existing exit2 negative diagnostics remain after all four edges. Critic measured no synchronous change at parse call; a separate extra repeated pressed=true advanced 6→7, so this does not establish auto-repeat immunity. Executor first implementation failed three slider cases with untyped conditional Array→`Array[float]` SCRIPT ERROR and timeout (59/62); that scratch failure remains recorded. Corrected typed arrays/reused expected state, full author replay 62/62.
+- Named non-author `r38-edge-verifier` default-path full `python .shokunin/game-dev-2d/corpus/fixtures/run_battery.py --probe-failing --probe-unrelated-error --probe-export-launch --probe-godot-error --probe-stream-attribution --probe-crash-exit --probe-timeout`: exit0 **62/62 PASS** (51 ordinary +2 mutants +9 opt-ins); all prior r37 **62** `(case,verdict,actual_exit,signature)` rows identical, no new row. Byte-identical `corpus/lessons/r38-edge-verifier.json`, report `reports/r38-edge-verifier.md`. Separate fault outer PASS with intentional inner timeout/unrelated-error FAIL (`r38-fault-verifier.json`). Scratch omitting only ui_right press fails specifically at the new ui_right press assertion; source hashes stable. Verifier's first scratch command had wrong relative script path; corrected before direct test, not counted PASS.
+
+## Landed changes and before → after
+- LOG/SCORECARD, only HSlider fixture (runner byte-unchanged), lesson, wave and verifier reports/raw: `64133cd0ef5851c511f0fefe5bfc4a50515144ee`. This report lands separately after work commit.
+- Before r37 HEAD `b7a8041`: 51 ordinary/62 full with post-complete-action checks. After: 51 ordinary/62 full with press/release state/receipt/Label assertions in connected, disconnected and no-focus arms. **Depth improved**; **coverage unchanged**, **calibration unchanged**, none harmed in finite replay.
+- Constants unchanged ordinary51/full62, min0/max10/step1/value5 and row signatures. Added per-edge expectation right 6,6 then left 5,5 and connected cumulative receipts `[6],[6],[6,5],[6,5]`. Scope one synthetic event+process frame, not rendered/pointer, physical keyboard/timing/repeat, accessibility, production or generic slider behavior. No engine/editor/seeded control edits, publishing, push or merge.
+
+## SHONEN
+- [~] Decision/error table with cited source — `corpus/lessons/r38-hslider-press-release.md`; not independent promotion check.
+- [~] End-to-end task and named non-author replay — `reports/r38-edge-verifier.md`, `corpus/lessons/r38-edge-verifier.json`; not promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed, PROVINCE accurate — not independently checked.
