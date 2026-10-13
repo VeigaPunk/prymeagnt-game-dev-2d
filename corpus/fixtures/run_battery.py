@@ -6,8 +6,11 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
+import time
+import selectors
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,6 +34,12 @@ CASES = [
     ("camera_no_follow", "camera_follow.gd", ["--no-follow"], 2, "camera follow assertion failed: target moved but active center did not track"),
     ("camera_limit", "camera_limit.gd", [], 0, "PASS camera_limit moved=true current=true center_at_viewport_adjusted_clamp=true center_differs_from_target=true far_bound=false"),
     ("camera_far_bound", "camera_limit.gd", ["--far-bound"], 2, "camera limit assertion failed: expected active center within right boundary and distinct from target"),
+    ("camera_top_limit", "camera_limit.gd", ["--top-bound"], 0, "PASS camera_limit moved=true current=true center_at_viewport_adjusted_clamp=true center_differs_from_target=true"),
+    ("camera_far_top_bound", "camera_limit.gd", ["--far-top-bound"], 2, "camera limit assertion failed: expected active center within top boundary and distinct from target"),
+    ("camera_left_limit", "camera_limit.gd", ["--left-bound"], 0, "PASS camera_limit moved=true current=true center_at_viewport_adjusted_clamp=true center_differs_from_target=true"),
+    ("camera_far_left_bound", "camera_limit.gd", ["--far-left-bound"], 2, "camera limit assertion failed: expected active center within left boundary and distinct from target"),
+    ("camera_bottom_limit", "camera_limit.gd", ["--bottom-bound"], 0, "PASS camera_limit moved=true current=true center_at_viewport_adjusted_clamp=true center_differs_from_target=true"),
+    ("camera_far_bottom_bound", "camera_limit.gd", ["--far-bottom-bound"], 2, "camera limit assertion failed: expected active center within bottom boundary and distinct from target"),
     ("ui_signal_hud", "ui_signal_hud.gd", [], 0, "PASS ui_signal connected=true hud_in_tree=true initial=Score: 0 hud_text=Score: 7"),
     ("ui_signal_disconnected", "ui_signal_hud.gd", ["--disconnect-signal"], 2, "UI assertion failed: expected in-tree HUD text=Score: 7"),
     ("health_gauge", "health_gauge.gd", [], 0, "PASS health_gauge in_tree=true range=0..100 values=35,0.0,100.0,100.0 receipts=35,0,100"),
@@ -44,8 +53,46 @@ CASES = [
     ("tween_no_start", "tween_flash.gd", ["--no-tween"], 2, "TWEEN ASSERTION FAILED: modulate did not show flash then return to baseline,"),
     ("audio_playback", "audio_playback.gd", [], 0, "PASS audio_playback in_tree=true playing=true position_advanced=true"),
     ("audio_no_play", "audio_playback.gd", ["--no-play"], 2, "AUDIO ASSERTION FAILED: expected in-tree player playback to advance"),
+    ("audio_bus_route", "audio_bus_route.gd", [], 0, "PASS audio_bus_route in_tree=true requested=FixtureBus resolved_index=1 resolved_bus=FixtureBus playing=true position_advanced=true"),
+    ("audio_bus_route_invalid_control", "audio_bus_route.gd", ["--invalid"], 2, "AUDIO BUS CONTROL ASSERTION FAILED: requested invalid route silently fell back to Master"),
     ("export_readiness", "__godot_export__", [], 0, "EXPORT PASS preset=Linux/X11 executable=nonempty"),
     ("export_preset_missing", "__godot_export_missing__", [], 1, "No export preset 'Missing preset' found"),
+    ("button_activation", "button_activation.gd", [], 0, "PASS button_activation in_tree=true initial=Ready edge_texts=[Ready,Activated 1,Activated 1,Activated 2] receipts=[0,1,1,2]"),
+    ("button_activation_disconnected", "button_activation.gd", ["--disconnect-signal"], 2, "UI BUTTON ASSERTION FAILED: expected release1 text=Activated 1 receipts=1"),
+    ("button_activation_unfocused", "button_activation.gd", ["--no-focus"], 2, "UI BUTTON ASSERTION FAILED: expected release1 text=Activated 1 receipts=1"),
+    ("button_activation_focus_loss", "button_activation.gd", ["--lose-focus-after-first"], 0, "PASS button_activation_focus_loss initial=focused release1=Activated1 mid_sequence=no_focus release2=Activated1 receipts=1"),
+    ("checkbox_toggle", "checkbox_toggle.gd", [], 0, "PASS checkbox_toggle edge_states=[false,true,true,false] toggled=[true,false] labels=[On,Off]"),
+    ("checkbox_toggle_disconnected", "checkbox_toggle.gd", ["--disconnect-signal"], 2, "ERROR: CHECKBOX SIGNAL ASSERTION FAILED: expected toggled sequence [true,false], got []"),
+    ("button_group_selection", "button_group_selection.gd", [], 0, "PASS button_group_selection exclusive=true toggled=[A:false,B:true,B:false,A:true] labels=[B,A]"),
+    ("button_group_selection_disconnected", "button_group_selection.gd", ["--disconnect-signal"], 2, "ERROR: BUTTON_GROUP SIGNAL ASSERTION FAILED: expected transitions [A:false,B:true,B:false,A:true], got []"),
+    ("button_group_selection_ungroup_b", "button_group_selection.gd", ["--ungroup-b"], 2, "BUTTON_GROUP ABSENCE ASSERTION FAILED after B→A: expected exclusive selection, got A=true B=true"),
+    ("slider_adjust", "slider_adjust.gd", [], 0, "PASS slider_adjust focused=true range=0..10 step=1 values=6,5 receipts=6,5 Labels=Value 6,Value 5"),
+    ("slider_adjust_disconnected", "slider_adjust.gd", ["--disconnect-signal"], 2, "SLIDER SIGNAL ASSERTION FAILED: expected value_changed receipts [6,5] and Labels [Value 6,Value 5]"),
+    ("slider_adjust_no_focus", "slider_adjust.gd", ["--no-focus"], 2, "SLIDER NO-FOCUS ASSERTION FAILED: expected focus-dependent adjustment values=6,5"),
+    ("slider_adjust_repeat_right", "slider_adjust.gd", ["--repeat-right"], 0, "PASS slider_adjust_repeat focused=true range=0..10 step=1 values=6,7,7,6,6,5,5 receipts=6,7,6,5 Labels=Value 6,Value 7,Value 6,Value 5"),
+    ("slider_adjust_repeat_right_disconnected", "slider_adjust.gd", ["--repeat-right", "--disconnect-signal"], 2, "SLIDER REPEAT SIGNAL ASSERTION FAILED: expected value_changed receipts [6,7,6,5] and Labels [Value 6,Value 7,Value 6,Value 5]"),
+    ("slider_adjust_repeat_right_no_focus", "slider_adjust.gd", ["--repeat-right", "--no-focus"], 2, "SLIDER REPEAT NO-FOCUS ASSERTION FAILED: expected focus-dependent adjustment values=6,7,7,6,6,5,5"),
+    ("slider_adjust_repeat_right_focus_handoff", "slider_adjust.gd", ["--repeat-right", "--focus-handoff"], 2, "SLIDER REPEAT FOCUS-HANDOFF ASSERTION FAILED: expected post-handoff adjustment after seven checks"),
+    ("slider_adjust_repeat_right_focus_restore", "slider_adjust.gd", ["--repeat-right", "--focus-restore"], 0, "PASS slider_adjust_repeat_focus_restore focused=true range=0..10 step=1 values=6,6,6,5,5,4,4 receipts=6,5,4 Labels=Value 6,Value 5,Value 4"),
+    ("slider_adjust_repeat_right_second_focus_loss", "slider_adjust.gd", ["--repeat-right", "--second-focus-loss"], 2, "SLIDER REPEAT SECOND-FOCUS-LOSS ASSERTION FAILED: expected final restored-focus adjustment after seven checks"),
+    ("slider_adjust_repeat_right_second_focus_restore", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore"], 0, "PASS slider_adjust_repeat_second_focus_restore focused=true values=6,6,6,5,5,5,5,4,4 receipts=6,5,4 Labels=Value 6,Value 5,Value 4"),
+    ("slider_adjust_repeat_right_second_focus_restore_disconnected", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--disconnect-signal"], 2, "SLIDER DOUBLE-RESTORE DISCONNECTED ASSERTION FAILED: expected signal-consumer updates"),
+    ("slider_adjust_repeat_right_second_focus_restore_reconnect_after_first_left", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--reconnect-after-first-left"], 0, "PASS slider_adjust_repeat_second_focus_restore_reconnect values=6,6,6,5,5,5,5,4,4 receipts=6,4 Labels=Value 6,Value 4"),
+    ("slider_adjust_repeat_right_second_focus_restore_release_after_late_reconnect_press", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--release-after-late-reconnect-press"], 2, "SLIDER RELEASE AFTER LATE-RECONNECT PRESS ASSERTION FAILED: expected no new receipt after eleven checks"),
+    ("slider_adjust_repeat_right_second_focus_restore_observe_parsed_release", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--observe-parsed-release"], 2, "SLIDER PARSED RELEASE OBSERVER ASSERTION FAILED: expected no new receipt after eleven checks"),
+    ("slider_adjust_repeat_right_second_focus_restore_composite_push_and_clear", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--composite-push-and-clear"], 2, "SLIDER COMPOSITE PUSH AND CLEAR ASSERTION FAILED: expected no new receipt after eleven checks"),
+    ("slider_adjust_repeat_right_second_focus_restore_clear_then_push_release", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--clear-then-push-release"], 2, "SLIDER CLEAR THEN PUSH RELEASE ASSERTION FAILED: expected no new receipt after eleven checks"),
+    ("slider_adjust_repeat_right_second_focus_restore_clear_frame_then_push_release", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--clear-frame-then-push-release"], 2, "SLIDER CLEAR FRAME THEN PUSH RELEASE ASSERTION FAILED: expected no new receipt after eleven checks"),
+    ("slider_adjust_repeat_right_second_focus_restore_push_frame_then_clear_release", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--push-frame-then-clear-release"], 2, "SLIDER PUSH FRAME THEN CLEAR RELEASE ASSERTION FAILED: expected no new receipt after eleven checks"),
+    ("slider_adjust_repeat_right_second_focus_restore_observe_push_input_release", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--observe-push-input-release"], 2, "SLIDER PUSH INPUT RELEASE ASSERTION FAILED: expected no new receipt after eleven checks"),
+    ("slider_adjust_repeat_right_second_focus_restore_press_after_late_reconnect", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--press-after-late-reconnect"], 0, "PASS slider_adjust_repeat_second_focus_restore_press_after_late_reconnect values=6,6,6,5,5,5,5,4,4,3 receipts=6,3 Labels=Value 6,Value 3"),
+    ("slider_adjust_repeat_right_second_focus_restore_reconnect_after_final_left", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--reconnect-after-final-left"], 2, "SLIDER LATE-RECONNECT ASSERTION FAILED: expected no retroactive receipt after nine checks"),
+    ("slider_adjust_repeat_right_second_focus_restore_disconnect_after_first", "slider_adjust.gd", ["--repeat-right", "--second-focus-restore", "--disconnect-after-first"], 2, "SLIDER MID-DISCONNECT ASSERTION FAILED: expected cumulative callback history to stay [6]"),
+    ("save_roundtrip", "save_roundtrip.gd", [], 0, "PASS save_roundtrip structured=true reopened=true values_match=true user_path="),
+    ("save_corrupt_negative", "save_roundtrip.gd", ["--corrupt-negative"], 2, "ERROR: SAVE EXPECTED NEGATIVE: malformed JSON rejected signature=JSON_PARSE_ERROR"),
+    ("save_process_writer", "__save_process_writer__", [], 0, "PASS save_process writer=true pid="),
+    ("save_process_reader", "__save_process_reader__", [], 0, "PASS save_process reader=true pid="),
+    ("save_process_missing", "__save_process_missing__", [], 2, "ERROR: SAVE PROCESS EXPECTED NEGATIVE: missing file rejected signature=FILE_NOT_FOUND"),
 ]
 
 
@@ -56,6 +103,9 @@ def main():
     parser.add_argument("--probe-unrelated-error", action="store_true", help="append unrelated ERROR diagnostics to real export outputs and reclassify")
     parser.add_argument("--probe-export-launch", action="store_true", help="export and launch positive/control startup scenes in bounded scratch Linux/X11 builds")
     parser.add_argument("--probe-godot-error", action="store_true", help="run paired real Godot push_error diagnostic classification probes")
+    parser.add_argument("--probe-stream-attribution", action="store_true", help="run paired real Godot stdout/stderr stream-attribution classification probes")
+    parser.add_argument("--probe-crash-exit", action="store_true", help="run a paired real-Godot normal-exit versus signal-termination probe")
+    parser.add_argument("--probe-timeout", action="store_true", help="run a paired real-Godot normal-exit versus timeout probe")
     parser.add_argument("--probe-audio-warning", action="store_true", help="classify captured r12 leaked and clean audio outputs with the production audio verdict")
     parser.add_argument("--godot", default="godot")
     parser.add_argument("--runs", type=Path, default=HERE.parent / "live" / "runs")
@@ -71,6 +121,12 @@ def main():
             shutil.copytree(item, scratch / item.name)
         else:
             shutil.copy2(item, scratch / item.name)
+    # Give this copied project a unique app_userdata directory for user:// isolation.
+    project_file = scratch / "project.godot"
+    project_text = project_file.read_text()
+    project_text = project_text.replace('config/name="MechanicOneShotTest"',
+                                        f'config/name="MechanicOneShotTest-{stamp}"', 1)
+    project_file.write_text(project_text)
     # Seeded controls/pickup.tscn references root pickup.gd; stage its scene in scratch.
     shutil.copy2(scratch / "controls" / "pickup.tscn", scratch / "pickup.tscn")
     # Godot 4.7.2 may install current_scene one process frame after the change.
@@ -81,9 +137,9 @@ def main():
     chain.write_text(text.replace(anchor, "    await process_frame\n    await process_frame\n    var old := current_scene", 1))
     results = []
 
-    def run_process(command, timeout_seconds):
+    def run_process(command, timeout_seconds, env=None):
         try:
-            proc = subprocess.run(command, capture_output=True, text=True, timeout=timeout_seconds)
+            proc = subprocess.run(command, capture_output=True, text=True, timeout=timeout_seconds, env=env)
             return proc.stdout + proc.stderr, proc.returncode, None
         except subprocess.TimeoutExpired as exc:
             output = (exc.stdout or b"").decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
@@ -110,6 +166,37 @@ def main():
                             and not any(allowed_error(line, allowed) for allowed in allowed_errors)]
         return (code == expected_exit and error is None and signature in output
                 and not unrelated_errors and "SCRIPT ERROR:" not in output and "Parse Error:" not in output)
+
+    def classify_streams(code, error, stdout, stderr, expected_exit, signature, allowed_stderr=()):
+        """Classify using separate stdout/stderr. Signature must appear on stdout."""
+        if code != expected_exit or error is not None:
+            return False
+        if signature not in stdout:
+            return False
+        if "SCRIPT ERROR:" in stdout or "SCRIPT ERROR:" in stderr:
+            return False
+        if "Parse Error:" in stdout or "Parse Error:" in stderr:
+            return False
+        stderr_lines = stderr.splitlines()
+        allowed = set(allowed_stderr)
+
+        def line_allowed(stripped):
+            if stripped in allowed:
+                return True
+            for a in allowed:
+                if a.endswith(",") and stripped.startswith(a) and stripped.count("ERROR:") == 1:
+                    return True
+            return False
+
+        for line in stderr_lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # Any unexpected stderr line rejects. Prefix-only checks would
+            # false-admit a printerr that is neither ERROR: nor STREAM_STDERR:.
+            if not line_allowed(stripped):
+                return False
+        return True
 
     def classify_audio_process(code, error, output, expected_exit, signature, allowed_errors=()):
         # Scope this known ObjectDB shutdown leak warning to audio_playback only;
@@ -189,13 +276,24 @@ def main():
             out_dir = export_project / "out"
             out_dir.mkdir(exist_ok=True)
             assert not any(out_dir.iterdir()), "export output directory must start empty"
-            export_path = out_dir / "fixture.x86_64"
+            export_path = (out_dir / "fixture.x86_64").resolve()
             command = [args.godot, "--headless", "--path", str(export_project),
                        "--export-debug", preset_name, str(export_path)]
+        elif script.startswith("__save_process_"):
+            mode = script.removeprefix("__save_process_").removesuffix("__")
+            script_path = "res://save_process.gd"
+            process_flags = {"writer": [], "reader": ["--reader"], "missing": ["--missing"]}[mode]
+            command = [args.godot, "--headless", "--path", str(scratch), "--script", script_path, "--", *process_flags]
         else:
             command = [args.godot, "--headless", "--path", str(scratch), "--script", "res://" + script, "--", *flags]
         timeout_seconds = 60 if script.startswith("__godot_export") else 8
-        output, code, error = run_process(command, timeout_seconds)
+        env = None
+        if script == "save_roundtrip.gd" or script.startswith("__save_process_"):
+            user_data = (run_dir / "xdg-data").resolve()
+            user_data.mkdir(exist_ok=True)
+            env = os.environ.copy()
+            env["XDG_DATA_HOME"] = str(user_data)
+        output, code, error = run_process(command, timeout_seconds, env=env)
         export_record = None
         if script == "__godot_export__":
             size = export_path.stat().st_size if export_path.is_file() else 0
@@ -295,23 +393,55 @@ def main():
                 "negative_transition": ("ERROR: Can't change to a null scene. Use unload_current_scene() if you wish to unload it.",
                                       "ERROR: negative control: deliberately invalid scene destination rejected"),
                 "negative_signal": ("ERROR: negative control: expected collected signal was absent (dispatch deliberately disabled)",),
+                "save_corrupt_negative": ("ERROR: SAVE EXPECTED NEGATIVE: malformed JSON rejected signature=JSON_PARSE_ERROR",),
+                "save_process_missing": ("ERROR: SAVE PROCESS EXPECTED NEGATIVE: missing file rejected signature=FILE_NOT_FOUND,",),
                 "camera_no_follow": ("ERROR: camera follow assertion failed: target moved but active center did not track",),
                 "camera_far_bound": ("ERROR: camera limit assertion failed: expected active center within right boundary and distinct from target",),
+                "camera_far_top_bound": ("ERROR: camera limit assertion failed: expected active center within top boundary and distinct from target",),
+                "camera_far_left_bound": ("ERROR: camera limit assertion failed: expected active center within left boundary and distinct from target",),
+                "camera_far_bottom_bound": ("ERROR: camera limit assertion failed: expected active center within bottom boundary and distinct from target",),
                 "ui_signal_disconnected": ("ERROR: UI assertion failed: expected in-tree HUD text=Score: 7",),
+                "button_activation_disconnected": ("ERROR: UI BUTTON ASSERTION FAILED: expected release1 text=Activated 1 receipts=1,",),
+                "button_activation_unfocused": ("ERROR: UI BUTTON ASSERTION FAILED: expected release1 text=Activated 1 receipts=1,",),
+                "checkbox_toggle_disconnected": ("ERROR: CHECKBOX SIGNAL ASSERTION FAILED: expected toggled sequence [true,false], got []",),
+                "button_group_selection_disconnected": ("ERROR: BUTTON_GROUP SIGNAL ASSERTION FAILED: expected transitions [A:false,B:true,B:false,A:true], got []",),
+                "button_group_selection_ungroup_b": ("ERROR: BUTTON_GROUP ABSENCE ASSERTION FAILED after B→A: expected exclusive selection, got A=true B=true",),
+                "slider_adjust_disconnected": ("ERROR: SLIDER SIGNAL ASSERTION FAILED: expected value_changed receipts [6,5] and Labels [Value 6,Value 5]",),
+                "slider_adjust_no_focus": ("ERROR: SLIDER NO-FOCUS ASSERTION FAILED: expected focus-dependent adjustment values=6,5",),
+                "slider_adjust_repeat_right_disconnected": ("ERROR: SLIDER REPEAT SIGNAL ASSERTION FAILED: expected value_changed receipts [6,7,6,5] and Labels [Value 6,Value 7,Value 6,Value 5]",),
+                "slider_adjust_repeat_right_no_focus": ("ERROR: SLIDER REPEAT NO-FOCUS ASSERTION FAILED: expected focus-dependent adjustment values=6,7,7,6,6,5,5",),
+                "slider_adjust_repeat_right_focus_handoff": ("ERROR: SLIDER REPEAT FOCUS-HANDOFF ASSERTION FAILED: expected post-handoff adjustment after seven checks",),
+                "slider_adjust_repeat_right_focus_restore": (),
+                "slider_adjust_repeat_right_second_focus_loss": ("ERROR: SLIDER REPEAT SECOND-FOCUS-LOSS ASSERTION FAILED: expected final restored-focus adjustment after seven checks",),
+                "slider_adjust_repeat_right_second_focus_restore": (),
+                "slider_adjust_repeat_right_second_focus_restore_disconnected": ("ERROR: SLIDER DOUBLE-RESTORE DISCONNECTED ASSERTION FAILED: expected signal-consumer updates",),
+                "slider_adjust_repeat_right_second_focus_restore_disconnect_after_first": ("ERROR: SLIDER MID-DISCONNECT ASSERTION FAILED: expected cumulative callback history to stay [6]",),
+                "slider_adjust_repeat_right_second_focus_restore_reconnect_after_final_left": ("ERROR: SLIDER LATE-RECONNECT ASSERTION FAILED: expected no retroactive receipt after nine checks",),
+                "slider_adjust_repeat_right_second_focus_restore_press_after_late_reconnect": (),
+                "slider_adjust_repeat_right_second_focus_restore_release_after_late_reconnect_press": ("ERROR: SLIDER RELEASE AFTER LATE-RECONNECT PRESS ASSERTION FAILED: expected no new receipt after eleven checks",),
+                "slider_adjust_repeat_right_second_focus_restore_observe_parsed_release": ("ERROR: SLIDER PARSED RELEASE OBSERVER ASSERTION FAILED: expected no new receipt after eleven checks",),
+                "slider_adjust_repeat_right_second_focus_restore_composite_push_and_clear": ("ERROR: SLIDER COMPOSITE PUSH AND CLEAR ASSERTION FAILED: expected no new receipt after eleven checks",),
+                "slider_adjust_repeat_right_second_focus_restore_clear_then_push_release": ("ERROR: SLIDER CLEAR THEN PUSH RELEASE ASSERTION FAILED: expected no new receipt after eleven checks",),
+                "slider_adjust_repeat_right_second_focus_restore_clear_frame_then_push_release": ("ERROR: SLIDER CLEAR FRAME THEN PUSH RELEASE ASSERTION FAILED: expected no new receipt after eleven checks",),
+                "slider_adjust_repeat_right_second_focus_restore_push_frame_then_clear_release": ("ERROR: SLIDER PUSH FRAME THEN CLEAR RELEASE ASSERTION FAILED: expected no new receipt after eleven checks",),
+                "slider_adjust_repeat_right_second_focus_restore_observe_push_input_release": ("ERROR: SLIDER PUSH INPUT RELEASE ASSERTION FAILED: expected no new receipt after eleven checks",),
                 "health_gauge_disconnected": ("ERROR: Health gauge assertion failed: expected in-tree TextureProgressBar value=35 value_changed=1 receipt=35",),
                 "animation_stuck": ("ERROR: ANIMATION ASSERTION FAILED: expected animated property x=60 after bounded advance,",),
                 "tween_no_start": ("ERROR: TWEEN ASSERTION FAILED: modulate did not show flash then return to baseline,",),
                 "export_preset_missing": ("ERROR: Invalid export preset name: Missing preset.",),
                 "contact_no_collision": ("ERROR: CONTACT ASSERTION FAILED: body motion did not contact level tile at cell=2,3,",),
                 "audio_no_play": ("ERROR: AUDIO ASSERTION FAILED: expected in-tree player playback to advance,",),
+                "audio_bus_route_invalid_control": ("ERROR: AUDIO BUS CONTROL ASSERTION FAILED: requested invalid route silently fell back to Master,",),
             }.get(name, ())
             classifier = classify_audio_process if name == "audio_playback" else classify_process
             passed = detected if mutate else classifier(code, error, output, expected_exit, evidence, expected_errors)
         # A script/parse error never counts as intended mutant detection.
         if "SCRIPT ERROR:" in output or "Parse Error:" in output:
             passed = False
-        record = {"case": name, "script": script, "flags": flags, "expected_exit": expected_exit,
-                  "actual_exit": code, "signature": evidence, "verdict": "PASS" if passed else "FAIL",
+        record = {"case": name, "script": script, "flags": flags, "command": command,
+                  "xdg_data_home": env.get("XDG_DATA_HOME") if env else None,
+                  "expected_exit": expected_exit, "actual_exit": code, "signature": evidence,
+                  "verdict": "PASS" if passed else "FAIL",
                   "error": error, "output": output.strip().splitlines()}
         if export_record is not None:
             record["export_artifact"] = export_record
@@ -320,6 +450,58 @@ def main():
 
     for case in CASES:
         execute(*case)
+    process_records = {r["case"]: r for r in results if r["case"] in {
+        "save_process_writer", "save_process_reader", "save_process_missing"}}
+    def process_evidence(record, role):
+        text = "\n".join(record["output"])
+        match = re.search(r"pid=(\d+).*path=(\S+)", text)
+        return {"pid": int(match.group(1)) if match else None,
+                "path": match.group(2) if match else None,
+                "signature": record["signature"], "output": record["output"],
+                "command": record["command"], "actual_exit": record["actual_exit"],
+                "role": role}
+    process_evidence_rows = {
+        name: process_evidence(record, name.removeprefix("save_process_"))
+        for name, record in process_records.items()}
+    writer = process_evidence_rows["save_process_writer"]
+    reader = process_evidence_rows["save_process_reader"]
+    negative = process_records["save_process_missing"]
+    user_data = str((run_dir / "xdg-data").resolve())
+    writer_path = Path(writer["path"]) if writer["path"] else None
+    user_data_path = Path(user_data)
+    try:
+        writer_inside_xdg = writer_path is not None and writer_path.is_relative_to(user_data_path)
+    except ValueError:
+        writer_inside_xdg = False
+    process_meta_ok = (
+        writer["pid"] is not None and reader["pid"] is not None and writer["pid"] != reader["pid"]
+        and writer["path"] == reader["path"] and writer_path is not None
+        and writer_inside_xdg
+        and "--script" in writer["command"] and "--script" in reader["command"]
+        and writer["command"][writer["command"].index("--script") + 1] == reader["command"][reader["command"].index("--script") + 1]
+        and process_records["save_process_writer"].get("xdg_data_home") == user_data
+        and process_records["save_process_reader"].get("xdg_data_home") == user_data
+        and process_records["save_process_missing"].get("xdg_data_home") == user_data
+        and all(record["command"][record["command"].index("--path") + 1] == str(scratch)
+                for record in process_records.values())
+        and process_records["save_process_writer"]["verdict"] == "PASS"
+        and process_records["save_process_reader"]["verdict"] == "PASS"
+        and negative["verdict"] == "PASS"
+        and negative["actual_exit"] == 2
+        and "--missing" in negative["command"]
+    )
+    process_payload = {"mode": "independent_godot_process_save_read",
+                       "same_project": True, "same_absolute_xdg_data_home": user_data,
+                       "writer_reader_distinct_pid": writer["pid"] != reader["pid"],
+                       "evidence": process_evidence_rows,
+                       "negative_missing_file_rejected": negative["verdict"] == "PASS",
+                       "verdict": "PASS" if process_meta_ok else "FAIL",
+                       "bounded_claim": "headless Godot process writes JSON then a distinct Godot process reads exact structure; paired separate-process missing-file rejection; not crash/power-loss durability or arbitrary corruption detection"}
+    process_artifact = run_dir / "save-process-verdicts.json"
+    process_artifact.write_text(json.dumps(process_payload, indent=2) + "\n")
+    results.append({"case": "probe_save_independent_process", "verdict": process_payload["verdict"],
+                    "artifact": str(process_artifact), "pids": [writer["pid"], reader["pid"]]})
+    print(f"{process_payload['verdict']} independent save process probe: {process_artifact}", flush=True)
     if args.probe_failing:
         destination = scratch / "scene_b.tscn"
         original = destination.read_text()
@@ -355,7 +537,7 @@ def main():
             configure_launch(project, with_event)
             out_dir = project / "out"
             out_dir.mkdir(exist_ok=True)
-            executable = out_dir / "fixture-launch.x86_64"
+            executable = (out_dir / "fixture-launch.x86_64").resolve()
             export_cmd = [args.godot, "--headless", "--path", str(project), "--export-debug", "Linux/X11", str(executable)]
             exp_output, exp_code, exp_error = run_process(export_cmd, 60)
             exp_ok = (classify_process(exp_code, exp_error, exp_output, 0, "[ DONE ]")
@@ -476,6 +658,304 @@ def main():
                         "artifact": str(artifact), "inner_classifications":
                         [r["inner_classification"] for r in probe_results]})
         print(f"{probe_payload['verdict']} Godot diagnostic probe: {artifact}")
+
+    if args.probe_stream_attribution:
+        def run_process_streams(command, timeout_seconds):
+            try:
+                proc = subprocess.run(command, capture_output=True, text=True, timeout=timeout_seconds)
+                return proc.stdout, proc.stderr, proc.returncode, None
+            except subprocess.TimeoutExpired as exc:
+                out = (exc.stdout or b"").decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+                err = (exc.stderr or b"").decode(errors="replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+                return out, err, None, f"TIMEOUT after {timeout_seconds} seconds"
+            except OSError as exc:
+                return "", str(exc), None, f"launch error: {exc}"
+
+        stdout_sig = "STREAM_STDOUT: expected attribution marker"
+        stderr_diag = "STREAM_STDERR: unrelated attribution diagnostic"
+        probe_results = []
+        for label, flags in (("stream_accept", []),
+                             ("stream_reject", ["--stderr-unrelated"])):
+            command = [args.godot, "--headless", "--path", str(scratch), "--script",
+                       "res://stream_attribution_probe.gd", "--", *flags]
+            stdout, stderr, code, error = run_process_streams(command, 8)
+            inner = classify_streams(code, error, stdout, stderr, 0, stdout_sig, allowed_stderr=())
+            record = {
+                "case": label,
+                "command": command,
+                "expected_exit": 0,
+                "actual_exit": code,
+                "error": error,
+                "signature": stdout_sig,
+                "inner_classification": inner,
+                "raw_stdout": stdout,
+                "raw_stderr": stderr,
+                "raw_stdout_lines": stdout.strip().splitlines() if stdout else [],
+                "raw_stderr_lines": stderr.strip().splitlines() if stderr else [],
+            }
+            probe_results.append(record)
+            print(f"{'PASS' if inner else 'FAIL'} {label}: exit={code} classification={inner}", flush=True)
+
+        accept, reject = probe_results
+
+        def has_exact_stdout(record, marker_text):
+            return any(line.strip() == marker_text for line in record["raw_stdout_lines"])
+
+        def has_exact_stderr(record, marker_text):
+            return any(line.strip() == marker_text for line in record["raw_stderr_lines"])
+
+        script_paths = [record["command"][record["command"].index("--script") + 1]
+                        for record in probe_results]
+        same_script = (len(set(script_paths)) == 1
+                       and script_paths[0] == "res://stream_attribution_probe.gd")
+        accept_stdout_ok = has_exact_stdout(accept, stdout_sig)
+        reject_stdout_ok = has_exact_stdout(reject, stdout_sig)
+        accept_no_stderr_diag = not has_exact_stderr(accept, stderr_diag)
+        reject_has_stderr_diag = has_exact_stderr(reject, stderr_diag)
+        same_exit = accept["actual_exit"] == reject["actual_exit"] == 0
+        meta_pass = (
+            accept["inner_classification"] is True
+            and reject["inner_classification"] is False
+            and accept_stdout_ok and reject_stdout_ok
+            and accept_no_stderr_diag and reject_has_stderr_diag
+            and same_exit and same_script
+            and accept["error"] is None and reject["error"] is None
+        )
+        probe_payload = {
+            "mode": "real_godot_stream_attribution",
+            "same_script": same_script,
+            "script_paths": script_paths,
+            "stdout_signature": stdout_sig,
+            "stderr_diagnostic": stderr_diag,
+            "results": probe_results,
+            "accept_emitted_stdout_marker": accept_stdout_ok,
+            "reject_emitted_stdout_marker": reject_stdout_ok,
+            "accept_lacks_stderr_diagnostic": accept_no_stderr_diag,
+            "reject_emitted_stderr_diagnostic": reject_has_stderr_diag,
+            "same_exit_zero": same_exit,
+            "verdict": "PASS" if meta_pass else "FAIL",
+            "bounded_claim": (
+                "one Godot 4.7.2 headless stream-attribution pair; "
+                "not crash classification, not process-tree timeout, "
+                "not export reliability, not rendered output"
+            ),
+        }
+        artifact = run_dir / "stream-attribution-verdicts.json"
+        artifact.write_text(json.dumps(probe_payload, indent=2) + "\n")
+        results.append({
+            "case": "probe_stream_attribution",
+            "verdict": probe_payload["verdict"],
+            "artifact": str(artifact),
+            "inner_classifications": [r["inner_classification"] for r in probe_results],
+        })
+        print(f"{probe_payload['verdict']} stream attribution probe: {artifact}")
+
+    if args.probe_crash_exit:
+        marker_text = "CRASH_EXIT_PROBE: expected signature"
+        script_path = "res://crash_exit_probe.gd"
+        timeout_seconds = 8
+        cleanup_seconds = 3
+        expected_exit = 1
+        probe_results = []
+        accept_command = [args.godot, "--headless", "--path", str(scratch), "--script",
+                          script_path, "--"]
+        accept_output, accept_code, accept_error = run_process(accept_command, timeout_seconds)
+        accept_classification = classify_process(accept_code, accept_error, accept_output,
+                                                 expected_exit, marker_text)
+        probe_results.append({"case": "crash_exit_accept", "command": accept_command,
+                              "expected_exit": expected_exit, "actual_exit": accept_code,
+                              "error": accept_error, "marker_observed": marker_text in accept_output,
+                              "inner_classification": accept_classification,
+                              "raw_output": accept_output,
+                              "raw_output_lines": accept_output.strip().splitlines()})
+
+        reject_command = [args.godot, "--headless", "--path", str(scratch), "--script",
+                          script_path, "--", "--hold-open"]
+        reject = {"case": "crash_exit_signal_reject", "command": reject_command,
+                  "expected_exit": expected_exit, "signal_name": "SIGTERM", "timeout_seconds": timeout_seconds,
+                  "cleanup_seconds": cleanup_seconds, "actual_exit": None,
+                  "error": None, "marker_observed": False, "process_was_running": False,
+                  "signal_sent": False, "inner_classification": False,
+                  "raw_stdout": "", "raw_stderr": ""}
+        process = None
+        try:
+            if os.name != "posix" or not hasattr(signal, "SIGTERM"):
+                reject["error"] = "SIGTERM probe unsupported on this platform"
+            else:
+                process = subprocess.Popen(reject_command, stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE, text=True, bufsize=1)
+                selector = selectors.DefaultSelector()
+                selector.register(process.stdout, selectors.EVENT_READ)
+                deadline = time.monotonic() + timeout_seconds
+                observed_line = False
+                while time.monotonic() < deadline and not observed_line:
+                    if process.poll() is not None:
+                        break
+                    events = selector.select(min(0.1, max(0.0, deadline - time.monotonic())))
+                    for key, _ in events:
+                        line = key.fileobj.readline()
+                        if line:
+                            reject["raw_stdout"] += line
+                            observed_line = line.strip() == marker_text
+                selector.close()
+                reject["marker_observed"] = observed_line
+                reject["process_was_running"] = process.poll() is None
+                if not reject["marker_observed"]:
+                    reject["error"] = "marker not observed before bounded timeout or process exit"
+                elif not reject["process_was_running"]:
+                    reject["error"] = "process was not live after marker observation"
+                else:
+                    process.send_signal(signal.SIGTERM)
+                    reject["signal_sent"] = True
+                try:
+                    remaining_out, reject["raw_stderr"] = process.communicate(timeout=cleanup_seconds)
+                    reject["raw_stdout"] += remaining_out
+                except subprocess.TimeoutExpired:
+                    reject["error"] = "signal cleanup timed out; forced kill used"
+                    process.kill()
+                    remaining_out, reject["raw_stderr"] = process.communicate(timeout=cleanup_seconds)
+                    reject["raw_stdout"] += remaining_out
+                reject["actual_exit"] = process.returncode
+                if reject["signal_sent"] and process.returncode == -signal.SIGTERM:
+                    reject["inner_classification"] = classify_process(
+                        process.returncode, None, reject["raw_stdout"] + reject["raw_stderr"],
+                        expected_exit, marker_text)
+                elif reject["signal_sent"] and reject["error"] is None:
+                    reject["error"] = f"expected return code {-signal.SIGTERM}, got {process.returncode}"
+        except (OSError, ValueError) as exc:
+            reject["error"] = f"signal probe launch/read error: {exc}"
+            if process is not None and process.poll() is None:
+                process.kill()
+                try:
+                    out, err = process.communicate(timeout=cleanup_seconds)
+                    reject["raw_stdout"] += out
+                    reject["raw_stderr"] += err
+                    reject["actual_exit"] = process.returncode
+                except subprocess.TimeoutExpired:
+                    reject["error"] += "; forced cleanup timed out"
+        finally:
+            if process is not None and process.poll() is None:
+                process.kill()
+                try:
+                    out, err = process.communicate(timeout=cleanup_seconds)
+                    reject["raw_stdout"] += out
+                    reject["raw_stderr"] += err
+                    reject["actual_exit"] = process.returncode
+                except subprocess.TimeoutExpired:
+                    reject["error"] = (reject["error"] or "") + "; bounded forced cleanup timed out"
+        probe_results.append(reject)
+        accept = probe_results[0]
+        same_script = all(record["command"][record["command"].index("--script") + 1] == script_path
+                          for record in probe_results)
+        same_marker = all(record.get("marker_observed") for record in probe_results)
+        same_expected_exit = all(record["expected_exit"] == expected_exit for record in probe_results)
+        meta_pass = (accept["inner_classification"] is True
+                     and reject["inner_classification"] is False
+                     and reject["process_was_running"] and reject["signal_sent"]
+                     and reject["actual_exit"] == -signal.SIGTERM
+                     and reject["error"] is None and same_script and same_marker and same_expected_exit)
+        probe_payload = {"mode": "real_godot_crash_exit", "platform": sys.platform,
+                         "signal": "SIGTERM", "signal_return_code": -signal.SIGTERM,
+                         "same_script": same_script, "same_expected_exit": same_expected_exit,
+                         "signature": marker_text, "results": probe_results,
+                         "bounded_claim": "one real Godot normal exit versus POSIX SIGTERM; no general crash or process-tree guarantee",
+                         "verdict": "PASS" if meta_pass else "FAIL"}
+        artifact = run_dir / "crash-exit-verdicts.json"
+        artifact.write_text(json.dumps(probe_payload, indent=2) + "\n")
+        results.append({"case": "probe_crash_exit", "verdict": probe_payload["verdict"],
+                        "artifact": str(artifact),
+                        "inner_classifications": [r["inner_classification"] for r in probe_results]})
+        print(f"{probe_payload['verdict']} crash-exit probe: {artifact}")
+
+    if args.probe_timeout:
+        marker_text = "TIMEOUT_PROBE: expected signature"
+        script_path = "res://timeout_probe.gd"
+        old_timeout_seconds = 0.75
+        measured_delay_seconds = 1.5
+        timeout_seconds = 3.0
+        cleanup_seconds = 3
+        expected_exit = 0
+        def bounded_run(case, extra_args, bound):
+            command = [args.godot, "--headless", "--path", str(scratch), "--script",
+                       script_path, "--"] + extra_args
+            record = {"case": case, "command": command, "expected_exit": expected_exit,
+                      "timeout_seconds": bound, "cleanup_seconds": cleanup_seconds,
+                      "actual_exit": None, "error": None, "marker_observed": False,
+                      "timed_out": False, "process_was_running": False,
+                      "direct_child_alive_after_cleanup": None, "raw_stdout": "", "raw_stderr": ""}
+            process = None
+            started_at = time.monotonic()
+            try:
+                process = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE, text=True, bufsize=1)
+                try:
+                    out, err = process.communicate(timeout=bound)
+                    record["raw_stdout"], record["raw_stderr"] = out, err
+                    record["actual_exit"] = process.returncode
+                except subprocess.TimeoutExpired as exc:
+                    record["timed_out"] = True
+                    out = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+                    err = exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+                    record["raw_stdout"], record["raw_stderr"] = out, err
+                    record["marker_observed"] = marker_text in out
+                    record["process_was_running"] = process.poll() is None
+                    record["error"] = f"TIMEOUT after {bound} seconds"
+                    if process.poll() is None:
+                        process.kill()
+                    more_out, more_err = process.communicate(timeout=cleanup_seconds)
+                    record["raw_stdout"], record["raw_stderr"] = more_out or "", more_err or ""
+                    record["cleanup_exit_code"] = process.returncode
+            except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+                record["error"] = f"launch/read/cleanup error: {exc}"
+                if process is not None and process.poll() is None:
+                    process.kill()
+                    try:
+                        process.communicate(timeout=cleanup_seconds)
+                    except subprocess.TimeoutExpired:
+                        record["error"] += "; direct-child cleanup timed out"
+            finally:
+                if process is not None:
+                    record["actual_exit"] = None if record["timed_out"] else process.poll()
+                    record["direct_child_alive_after_cleanup"] = process.poll() is None
+            record["elapsed_seconds"] = round(time.monotonic() - started_at, 3)
+            record["marker_observed"] = marker_text in record["raw_stdout"]
+            record["inner_classification"] = classify_process(
+                record["actual_exit"], record["error"], record["raw_stdout"] + record["raw_stderr"],
+                expected_exit, marker_text)
+            return record
+
+        old_positive = bounded_run("slow_clean_old_bound", ["--delay-clean"], old_timeout_seconds)
+        new_positive = bounded_run("slow_clean_new_bound", ["--delay-clean"], timeout_seconds)
+        hold_open = bounded_run("hold_open_new_bound", ["--hold-open"], timeout_seconds)
+        probe_results = [old_positive, new_positive, hold_open]
+        old_rejects = (old_positive["timed_out"] and old_positive["marker_observed"]
+                       and old_positive["inner_classification"] is False
+                       and old_positive["direct_child_alive_after_cleanup"] is False)
+        new_accepts = (not new_positive["timed_out"] and new_positive["actual_exit"] == expected_exit
+                       and new_positive["marker_observed"]
+                       and new_positive["inner_classification"] is True)
+        hold_rejects = (hold_open["timed_out"] and hold_open["marker_observed"]
+                        and hold_open["inner_classification"] is False
+                        and hold_open["direct_child_alive_after_cleanup"] is False)
+        same_script = all(record["command"][record["command"].index("--script") + 1] == script_path
+                          for record in probe_results)
+        same_expected_exit = all(record["expected_exit"] == expected_exit for record in probe_results)
+        meta_pass = old_rejects and new_accepts and hold_rejects and same_script and same_expected_exit
+        probe_payload = {"mode": "real_godot_timeout_three_arm", "platform": sys.platform,
+                         "same_script": same_script, "same_expected_exit": same_expected_exit,
+                         "signature": marker_text, "results": probe_results,
+                         "constants": {"old_timeout_seconds": old_timeout_seconds,
+                                       "measured_delay_seconds": measured_delay_seconds,
+                                       "new_timeout_seconds": timeout_seconds,
+                                       "cleanup_seconds": cleanup_seconds},
+                         "bounded_claim": "controlled delayed clean startup is rejected by old bound and accepted by new bound; hold-open marker still times out; direct child cleanup only",
+                         "verdict": "PASS" if meta_pass else "FAIL"}
+        artifact = run_dir / "timeout-verdicts.json"
+        artifact.write_text(json.dumps(probe_payload, indent=2) + "\n")
+        results.append({"case": "probe_timeout", "verdict": probe_payload["verdict"],
+                        "artifact": str(artifact),
+                        "inner_classifications": [r["inner_classification"] for r in probe_results]})
+        print(f"{probe_payload['verdict']} timeout probe: {artifact}")
 
     payload = {"godot": args.godot, "seed": str(HERE), "scratch": str(scratch),
                "probe_failing": args.probe_failing, "results": results,
