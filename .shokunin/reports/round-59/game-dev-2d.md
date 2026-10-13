@@ -1,0 +1,18 @@
+# game-dev-2d — round 59 — coverage (operator wrap)
+
+## Work performed
+- Declared one audio-bus coverage move in `.shokunin/game-dev-2d/LOG.md` before wave 1; baseline r58 work/report `ca7cd3ac`/`22b37bb`, 76 ordinary/87 full. Work commit `c27cd31a98559f6e79fea32cc55f12b0d1e49352`.
+- Eight disjoint wave-1 leaves settled with reports `.shokunin/game-dev-2d/reports/r59-audio-*.md` (scout, executor, critic, reviewer, simplifier, scribe, baseline, boundary). Scout/critic showed missing bus silently resolves to Master yet playback advances; hence playback-only control was falsified. Executor alone added `corpus/fixtures/audio_bus_route.gd` and two runner rows, with bus teardown. Initial executor and baseline concurrent/transient battery failures retained as adverse, then fresh clean replays passed 89/89.
+- Named non-author `r59-audio-verifier` exact seven flags, Godot4.7.2, **89/89 PASS**, all **87/87** prior r58 records match script/flags/expected and actual exit/signature/verdict/error. Raw copied byte-identically from `corpus/live/r59-audio-verifier/full-runs/20261013T134219828150Z/verdicts.json` to `corpus/lessons/r59-audio-non-author.json`. Positive explicit `FixtureBus` resolves index1, plays and advances; invalid `NoSuchFixtureBus` resolves `Master` index0 while still advancing, expected diagnostic exit2. No ObjectDB warning in either output. Positive Master-route and negative real-bus scratch sabotages reject with distinct diagnostics; initial malformed indentation sabotage is adverse. Tracked hashes stable across replay.
+- Named verifier did **not** run separate fault injection. Parent ran it separately: `corpus/lessons/r59-audio-parent-fault.json`, byte-identical to unique parent raw; outer PASS with expected timeout/unrelated inner FAIL and clean negative PASS. This is parent-run, not non-author evidence.
+
+## Landed changes and before → after
+- Work commit `c27cd31a98559f6e79fea32cc55f12b0d1e49352` includes LOG/SCORECARD/checklist, fixture/runner, nine leaf reports, named full raw, and separately labeled parent fault raw. This report lands in a separate last commit.
+- Before 76 ordinary/87 full and no named non-Master bus test; after 78 ordinary/89 full. Non-author counting command: `python3 .shokunin/game-dev-2d/corpus/fixtures/run_battery.py --godot godot --runs .shokunin/game-dev-2d/corpus/live/r59-audio-verifier/full-runs --probe-failing --probe-unrelated-error --probe-export-launch --probe-godot-error --probe-stream-attribution --probe-crash-exit --probe-timeout` (fresh --runs root when repeated). **Coverage improved**, **depth unchanged**, **calibration unchanged**, no harmed axis in finite clean replay; admit only route-name resolution/fallback and headless transport progress. No audible output, actual signal flow/mix level, production audio, rights, other platforms, engine/editor source, publishing, push or merge claim.
+- Constants changed: two CASE rows, ordinary76→78/full87→89; expected invalid bus route fallback diagnostic exits2; dynamic `FixtureBus` index1 removed after probe. **Operator wrap:** round 59 closes here and no round 60 is started.
+
+## SHONEN
+- [~] Decision/error checklist with sources — `corpus/knowledge/2026-10-12-production-checklist.md`, `.shokunin/game-dev-2d/reports/r59-audio-critic.md`; no independent promotion check.
+- [~] End-to-end task and named non-author replay — `.shokunin/game-dev-2d/reports/r59-audio-verifier.md`, `corpus/lessons/r59-audio-non-author.json`; no independent promotion check.
+- [ ] Executable instructions without oral context — not independently checked.
+- [ ] No cross-domain bleed/province accurate — not independently checked.
